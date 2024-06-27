@@ -1,0 +1,56 @@
+log_dir: './logs'
+seed: 1
+gpu: 1
+dataset:
+  name: wiki2000_nips   # dataset name
+  dim_x: 2000           # dimension of the dataset/timeseries
+  dim_c: 4              # dim_c = dim_c_lag + dim_c_normal
+  dim_c_lag: 2
+  tm: 60                # total time steps
+  tmh: 30               # conditioning time steps
+  tmf: 30               # forecasting time steps
+  kind: full            # legacy keyword, not used
+train:
+  batch_size: 64
+  ckpt_period: 250      # for saving the model checkpoint
+  share_arch: True      # whether to share the architecture between posterior and conditional prior
+model:
+  type: foretran        # foretran (ours) or protran (baseline)
+  dim_z: 16             # dimension of the latent space
+  likelihood: laplace   # emission distribution
+  reconstruct: True     # whether to use reconstruction loss or not
+  epsilon: 0.0000001    # Small constant to avoid numerical errors when normalizing with std = 0
+optim:
+  max_epoch: 500          # maximum number of epochs to train
+  base_lr: 0.0003         # learning rate
+  optimizer: adam         # Currently this keyword is ignored and we always use Adam
+  scheduler_gamma: 1.0    # learning rate decay
+  scheduler_n_epochs: 100 # number of epochs after which to decay the learning rate
+projection_args:
+  dim_list: [2004,128]  # Projection args of dim(x) + dim(c) --> dim(h)
+embedding_args:         # Positional Embeddings
+  arch_name: fixed
+  max_len: 60
+  mode: MODE_ADD        # Whether to add or concatenate the positional embeddings
+  embedding_dim: 128
+conditional_prior_args:
+  arch_name: 'foretran_transformer'       # our specific E-ProTran architecture
+  dim_ff_tran: [128,128,128,128]          # dims of the FF-Network in the transformer
+  num_heads: 8                            # num. attention heads
+  num_layers: 2                           # num. attention layers; 1 (Electricity Solar), 2 otherwise
+  dim_list: [128,128,128,16]              # dims for MLP that gives mean_z and var_z after transformer
+  kind_attentions: ['layer']              # kind of attentions to include, e.g. ['layer'], ['layer', 'input'], ['layer', 'input', 'autoregressive']
+# ignored if train.share_arch = True
+encoder_args: # posterior
+  arch_name: 'foretran_transformer'     # our specific E-ProTran architecture
+  dim_ff_tran: [128,128,128,128]        # dims of the FF-Network in the transformer
+  num_heads: 8                          # num. attention heads
+  num_layers: 2                         # num. attention layers; 1 (Electricity Solar), 2 otherwise
+  dim_list: [128,128,128,16]            # dims for MLP that gives mean_z and var_z after transformer
+  kind_attentions: ['layer']            # kind of attentions to include, e.g. ['layer'], ['layer', 'input'], ['layer', 'input', 'autoregressive']
+decoder_args:
+  arch_name: 'MLP'              # MLP, used to predict x_t from z_t
+  dim_list: [16,128,128,2000] 
+  variance: 1.0                 # Scale parameter for the Laplace distribution or the variance for the Gaussian distribution
+testing:
+  samples: 100                  # number of samples to generate for testing
