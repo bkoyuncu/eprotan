@@ -72,6 +72,6 @@ Authors: [Batuhan Koyuncu](https://www.batukoyuncu.com/), [Tim Nico Bauerschmidt
     author={Batuhan Koyuncu and Tim Nico Bauerschmidt and Isabel Valera},
     booktitle={ICML 2024 Workshop on Structured Probabilistic Inference {\&} Generative Modeling},
     year={2024},
-    url={TBD}
+    url={https://openreview.net/forum?id=Db5Ryi9Dr8}
 }
 ```
