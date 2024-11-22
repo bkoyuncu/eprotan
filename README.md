@@ -62,7 +62,7 @@ The file structure of the repository is as follows:
         ├── model_neat.py                   : model implementation for E-ProTran
         ├── protran_model.py                : model implementation for ProTran
         ├── ProtranHierarchy.py             : corrected version of the ProTran hierarchy
-        ├── ProtranHierarchyDeprecated.py   : classes to create the ProTran hierarchy, deprecatred version with the aforemention sampling error
+        ├── ProtranHierarchyDeprecated.py   : classes to create the ProTran hierarchy, deprecatred version with the aforementioned sampling error
         └── TransformerBNEncoderLayer.py    : unused in the paper, outdated implementation of a transformer for E-ProTran
 ```
 The example configs are in `example_cfgs/` and can be used to run the models with the `run.py` script. They are representative of the configurations used in the paper, but they do not necessarily contain the best training hyperparameters in terms of learning rate and learning rate decay.
