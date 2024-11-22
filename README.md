@@ -23,7 +23,7 @@ However, fully written out the ELBO is:
 \end{align*}
 ```
 
-From the second formulation it becomes clear that to approximate the expectation $`{\mathbf{E}_{z_{1:t-1}\sim q_\phi(z_{1:t-1}\vert x_{1:T})}}`$ in the loss, the KL-divergence $\mathrm{KL}\left( q_\phi(\cdot\vert z_{1:t-1}, x_{1:T}) \Vert p_{\theta}(\cdot \vert z_{1:t-1}, x_{1:C})\right)$ should be evaluated at samples $z_{1:t-1}\sim q_\phi(z_{1:t-1}\vert x_{1:T})$. 
+From the second formulation it becomes clear that to approximate the expectation $`{\mathbf{E}_{z_{1:t-1}\sim q_\phi(z_{1:t-1}\vert x_{1:T})}}`$ in the loss, the KL-divergence $\mathrm{KL}\left( q_\phi(\cdot\vert z_{1:t-1}, x_{1:T}) \Vert p_{\theta}(\cdot \vert z_{1:t-1}, x_{1:C})\right)$ should be evaluated at samples from $z_{1:t-1}\sim q_\phi(z_{1:t-1}\vert x_{1:T})$. 
 
 At the time of publishing, our re-implementation of their model wrongly evaluated $p_{\theta}(\cdot \vert z_{1:t-1}, x_{1:C})$ at samples from $z_{1:t-1}\sim p_\theta(z_{1:t-1}\vert x_{1:C})$. We have updated our code to correctly calculate the ELBO of the ProTran baseline. We have kept the old version of our code as `deprecated` to ensure reproducability of our experiments.
 
