@@ -27,6 +27,8 @@ From the second formulation it becomes clear that to approximate the expectation
 
 At the time of publishing, our re-implementation of their model wrongly evaluated $p_{\theta}(\cdot \vert z_{1:t-1}, x_{1:C})$ at samples from $z_{1:t-1}\sim p_\theta(z_{1:t-1}\vert x_{1:C})$. We are currently working on updating our code to correctly calculate the ELBO of the ProTran baseline. We will keep the old version of our code as `deprecated` to ensure reproducability of our experiments.
 
+The corrected version can be found in `source/models/ProTranHierarchy`. It uses the same `ProTran` class (from `source/models/protran_model`) but requires the flag `deprecated = False` in the constructor. Our original code is in `source/models/ProTranHierarchyDeprecated`.
+
 
 ## Code
 This repository contains the code for our model, E-ProTran, as well as our implementation of the baseline model, [Probabilistic Transformer (ProTran)](https://proceedings.neurips.cc/paper/2021/hash/c68bd9055776bf38d8fc43c0ed283678-Abstract.html) by Binh Tang and David S. Matteson as the code was not publicly available.
@@ -59,7 +61,8 @@ The file structure of the repository is as follows:
         ├── likelihood.py                   : likelihood functions
         ├── model_neat.py                   : model implementation for E-ProTran
         ├── protran_model.py                : model implementation for ProTran
-        ├── ProtranHierarchy.py             : classes to create the ProTran hierarchy
+        ├── ProtranHierarchy.py             : corrected version of the ProTran hierarchy
+        ├── ProtranHierarchyDeprecated.py   : classes to create the ProTran hierarchy, deprecatred version with the aforemention sampling error
         └── TransformerBNEncoderLayer.py    : unused in the paper, outdated implementation of a transformer for E-ProTran
 ```
 The example configs are in `example_cfgs/` and can be used to run the models with the `run.py` script. They are representative of the configurations used in the paper, but they do not necessarily contain the best training hyperparameters in terms of learning rate and learning rate decay.

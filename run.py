@@ -19,7 +19,7 @@ if __name__== '__main__':
     # read params
     parser = argparse.ArgumentParser(description='Training Script')
 
-    parser.add_argument('--yaml_file', type=str, default='./example_cfgs/eprotran_electricity.yaml', help='Path to the yaml config file')
+    parser.add_argument('--yaml_file', type=str, default='./example_cfgs/protran_electricity.yaml', help='Path to the yaml config file')
 
     parser.add_argument('--log_dir', type=str, default=None, help='Directory for logging')
 

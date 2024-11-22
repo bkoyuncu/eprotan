@@ -2,14 +2,20 @@ import torch
 import torch.distributions as D
 
 from source.models.archs import *
-from source.models.ProTranHierarchy import *
+from source.models.ProTranHierarchyDeprecated import (
+    get_protran_hierarchy as get_protran_hierarchy_deprecated,
+)
+from source.models.ProTranHierarchy import (
+    get_protran_hierarchy
+)
 from source.models.likelihood import *
 from source.models.AbstractBaseModel import AbstractBaseModel
 
 class ProTranModel(AbstractBaseModel):
-    def __init__(self, dataset, train, model, optim, projection_args, embedding_args, conditional_prior_args, encoder_args, decoder_args, **kwargs) -> None:
+    def __init__(self, dataset, train, model, optim, projection_args, embedding_args, conditional_prior_args, encoder_args, decoder_args, deprecated: bool = True, **kwargs) -> None:
         """
         Args:
+            deprecated (bool): Whether to use the deprecated ProTranHierarchy or not; the deprecated version is the version used in the original paper
             log_dir: (str) path to project folder currently empty
             dataset:
                 name: (str) name of the dataset
@@ -140,17 +146,32 @@ class ProTranModel(AbstractBaseModel):
         if conditional_prior_activation is not None:
             add_args["activation"] = conditional_prior_activation
         
-        self.protran_hierarchy = get_protran_hierarchy(
-            num_layers=conditional_prior_args["num_layers"],
-            d_model= self.dim_h, 
-            dim_latent= self.dim_latent,
-            dim_list_latent_cond_prior = conditional_prior_args["dim_list"],
-            dim_list_latent_to_w = conditional_prior_args["dim_list_latent_to_w"],
-            dim_list_latent_encoder = encoder_args["dim_list"],
-            num_heads=conditional_prior_args["num_heads"],
-            positional_encoding = self.embedding_layer, 
-            **add_args
-        )
+        if deprecated:
+            self.deprecated = True
+            self.protran_hierarchy = get_protran_hierarchy_deprecated(
+                num_layers=conditional_prior_args["num_layers"],
+                d_model= self.dim_h, 
+                dim_latent= self.dim_latent,
+                dim_list_latent_cond_prior = conditional_prior_args["dim_list"],
+                dim_list_latent_to_w = conditional_prior_args["dim_list_latent_to_w"],
+                dim_list_latent_encoder = encoder_args["dim_list"],
+                num_heads=conditional_prior_args["num_heads"],
+                positional_encoding = self.embedding_layer, 
+                **add_args
+            )
+        else:
+            self.deprecated = False
+            self.protran_hierarchy = get_protran_hierarchy(
+                num_layers=conditional_prior_args["num_layers"],
+                d_model= self.dim_h, 
+                dim_latent= self.dim_latent,
+                dim_list_latent_cond_prior = conditional_prior_args["dim_list"],
+                dim_list_latent_to_w = conditional_prior_args["dim_list_latent_to_w"],
+                dim_list_latent_encoder = encoder_args["dim_list"],
+                num_heads=conditional_prior_args["num_heads"],
+                positional_encoding = self.embedding_layer, 
+                **add_args
+            )
 
         self.decoder = get_decoder(likelihood=self.likelihood_x,**decoder_args)
         
@@ -206,7 +227,11 @@ class ProTranModel(AbstractBaseModel):
         xc_prior_embedding = self.ln(xc_prior_embedding) #[bs, Tm, dim_xc]
         
         # --- Conditional Prior p(z|x) and Encoder q(z|x) at once ---
-        mu_p_z, var_p_z, mu_q_z, var_q_z, w_p_hat, w_p, w_q_hat, w_q = self.protran_hierarchy(xc_prior_embedding, xc_embedding, bs, Tm, history_mask, padding_mask, self.device, self.use_sampling) # all [num_layers, batch_size, Tm, dim_latent], except w, w_hat [batch_size, Tm, d_model]
+        if self.deprecated:
+            mu_p_z, var_p_z, mu_q_z, var_q_z, w_p_hat, w_p, w_q_hat, w_q = self.protran_hierarchy(xc_prior_embedding, xc_embedding, bs, Tm, history_mask, padding_mask, self.device, self.use_sampling) # all [num_layers, batch_size, Tm, dim_latent], except w, w_hat [batch_size, Tm, d_model]
+        else:
+            # Adjustment to fix wrong ELBO
+            mu_p_z, var_p_z, mu_p_z_loss, var_p_z_loss, mu_q_z, var_q_z, w_p_hat, w_p, w_q_hat, w_q = self.protran_hierarchy(xc_prior_embedding, xc_embedding, bs, Tm, history_mask, padding_mask, self.device, self.use_sampling) # all [num_layers, batch_size, Tm, dim_latent], except w, w_hat [batch_size, Tm, d_model]
         # avoid resampling z if we only need one sample
         if samples == 1:
             w_q = w_q[:,None,:,:] # [bs, samples, Tm, d_model] with samples=1
@@ -238,7 +263,10 @@ class ProTranModel(AbstractBaseModel):
         
         mask_temporal = padding_mask # [bs, Tm]
         
-        ELBO, logpx_z_sliced, KL_sliced = self.compute_elbo(mask_temporal, logpx_z, mu_q_z, mu_p_z, var_q_z, var_p_z)
+        if self.deprecated:
+            ELBO, logpx_z_sliced, KL_sliced = self.compute_elbo(mask_temporal, logpx_z, mu_q_z, mu_p_z, var_q_z, var_p_z)
+        else:
+            ELBO, logpx_z_sliced, KL_sliced = self.compute_elbo(mask_temporal, logpx_z, mu_q_z, mu_p_z_loss, var_q_z, var_p_z_loss)
         
         return x, x_p_hat, x_q_hat, ELBO, logpx_z_sliced, KL_sliced, mask_temporal
        

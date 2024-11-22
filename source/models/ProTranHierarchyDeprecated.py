@@ -205,10 +205,8 @@ class ProTranLayer(nn.modules.Module):
         Returns:
             w_p: [bs, Tm, d] Sequence of latent representations w^(l)_{1:Tm} at the current layer l. Note that we don't stop the generation for T < t <= Tm, this has to be addressed when computing the loss and the next layer.
             w_p_hat: [bs, Tm, d] Sequence of latent representations \hat{w}^(l)_{1:Tm} at the current layer that are used to sample the latent variables z^(l)_{1:Tm}.
-            mu_p_z: [bs, Tm, d] Sequence of latent means mu^(l)_{1:Tm} at the current layer that are used to sample the latent variables z^(l)_{1:Tm}.
-            var_p_z: [bs, Tm, d] Sequence of latent variances var^(l)_{1:Tm} at the current layer that are used to sample the latent variables z^(l)_{1:Tm}.
-            mu_p_z_loss: [bs, Tm, d] Sequence of latent means mu^(l)_{1:Tm} at the current layer that are used to calculate the KL divergence. The conditionining is done based on the samples from the encoder.
-            var_p_z_loss: [bs, Tm, d] Sequence of latent variances var^(l)_{1:Tm} at the current layer that are used to calculate the KL divergence. The conditionining is done based on the samples from the encoder.
+            mu_p_z: [bs, Tm, d] Sequence of latent means mu^(l)_{1:Tm} at the current layer that are used to sample the latent variables z^(l)_{1:Tm}. mu_p_z is used to calculate KL divergence.
+            var_p_z: [bs, Tm, d] Sequence of latent variances var^(l)_{1:Tm} at the current layer that are used to sample the latent variables z^(l)_{1:Tm}. var_p_z is used to calculate KL divergence.
             w_q: [bs, Tm, d] Sequence of latent representations w^(l)_{1:Tm} at the current layer l for the encoder.
             w_q_hat: [bs, Tm, d] Sequence of latent representations \hat{w}^(l)_{1:Tm} at the current layer that are used to sample the latent variables z^(l)_{1:Tm} for the encoder.
             mu_q_z: [bs, Tm, d] Sequence of latent means mu^(l)_{1:Tm} at the current layer that are used to sample the latent variables z^(l)_{1:Tm} for the encoder. mu_q_z is used to calculate KL divergence.
@@ -225,11 +223,8 @@ class ProTranLayer(nn.modules.Module):
         w_p = torch.zeros((batch_size, Tm, self.d_model)).to(device) # [bs, Tm, d] for output
         w_p_hat = torch.zeros((batch_size, Tm, self.d_model)).to(device) # [bs, Tm, d] for output
         
-        mu_p_z = torch.zeros((batch_size, Tm, self.dim_latent)).to(device) # [bs, Tm, dim_latent]
-        var_p_z = torch.zeros((batch_size, Tm, self.dim_latent)).to(device) # [bs, Tm, dim_latent]
-        
-        mu_p_z_loss = torch.zeros((batch_size, Tm, self.dim_latent)).to(device) # [bs, Tm, dim_latent] for loss
-        var_p_z_loss = torch.zeros((batch_size, Tm, self.dim_latent)).to(device) # [bs, Tm, dim_latent] for loss
+        mu_p_z = torch.zeros((batch_size, Tm, self.dim_latent)).to(device) # [bs, Tm, dim_latent] for loss
+        var_p_z = torch.zeros((batch_size, Tm, self.dim_latent)).to(device) # [bs, Tm, dim_latent] for loss
         
         # encoder layer
         w_q = torch.zeros((batch_size, Tm, self.d_model)).to(device) # [bs, Tm, d] for output
@@ -294,11 +289,6 @@ class ProTranLayer(nn.modules.Module):
             mu_p_t, var_p_t = torch.chunk(out_mlp, 2, -1) # [bs, dim_latent] and [bs, dim_latent]
             var_p_t = F.softplus(var_p_t) # [bs, dim_latent]
             
-            # pridct mu_p_t and w_p_t from w_q_hat_t for the KL divergence conditioned on the samples from the encoder q
-            out_mlp_loss = self.mlp_latent(w_q_hat_t.squeeze(1)) # [bs, 2*dim_latent]
-            mu_p_loss_t, var_p_loss_t = torch.chunk(out_mlp_loss, 2, -1) # [bs, dim_latent] and [bs, dim_latent]
-            var_p_loss_t = F.softplus(var_p_loss_t) # [bs, dim_latent]
-            
             # predict mu_q_t and var_q_t from w_q_hat_t
             mu_q_t, var_q_t = self.encoder_layer(time_step=t, w_hat=w_q_hat_t.squeeze(1), input_projection=input_projection_q, key_padding_mask=key_padding_mask_padding) # [bs, dim_latent] and [bs, dim_latent]
             
@@ -336,12 +326,10 @@ class ProTranLayer(nn.modules.Module):
             
             mu_p_z[:, t, :] = mu_p_t
             var_p_z[:, t, :] = var_p_t
-            mu_p_z_loss[:, t, :] = mu_p_loss_t
-            var_p_z_loss[:, t, :] = var_p_loss_t
             mu_q_z[:, t, :] = mu_q_t
             var_q_z[:, t, :] = var_q_t
             
-        return w_p, w_p_hat, mu_p_z, var_p_z, mu_p_z_loss, var_p_z_loss, w_q, w_q_hat, mu_q_z, var_q_z  
+        return w_p, w_p_hat, mu_p_z, var_p_z, w_q, w_q_hat, mu_q_z, var_q_z  
     
     def reset_k_encoder_layer(self):
         """Should be called after each forward pass in ProTran Hierarchy to reset the input attention layer output k."""
@@ -486,8 +474,6 @@ class ProTranHierarchy(nn.Module):
         Returns:
             mu_p (Tensor): Mean of the latent variable z_t of shape [num_layers, batch_size, Tm, dim_laten].
             var_p (Tensor): Variance of the latent variable z_t of shape [num_layers, batch_size, Tm, dim_latent].
-            mu_p_loss (Tensor): Mean of the latent variable z_t of shape [num_layers, batch_size, Tm, dim_latent]. The conditioning is done based on the samples from the encoder.
-            var_p_loss (Tensor): Variance of the latent variable z_t of shape [num_layers, batch_size, Tm, dim_latent]. The conditioning is done based on the samples from the encoder.
             mu_q (Tensor): Mean of the latent variable z_t of shape [num_layers, batch_size, Tm, dim_latent].
             var_q (Tensor): Variance of the latent variable z_t of shape [num_layers, batch_size, Tm, dim_latent].
             w_p_hat (Tensor): Latent representations w_hat_t of the last conditional prior layer of the hierarchy of shape [batch_size, Tm, d_model].
@@ -498,14 +484,12 @@ class ProTranHierarchy(nn.Module):
         
         mu_p = torch.zeros(self.num_layers, batch_size, Tm, self.dim_latent).to(device)  # [num_layers, batch_size, Tm, dim_latent]
         var_p = torch.zeros(self.num_layers, batch_size, Tm, self.dim_latent).to(device) # [num_layers, batch_size, Tm, dim_latent]
-        mu_p_loss = torch.zeros(self.num_layers, batch_size, Tm, self.dim_latent).to(device)  # [num_layers, batch_size, Tm, dim_latent]
-        var_p_loss = torch.zeros(self.num_layers, batch_size, Tm, self.dim_latent).to(device) # [num_layers, batch_size, Tm, dim_latent]
         mu_q = torch.zeros(self.num_layers, batch_size, Tm, self.dim_latent).to(device)  # [num_layers, batch_size, Tm, dim_latent]
         var_q = torch.zeros(self.num_layers, batch_size, Tm, self.dim_latent).to(device) # [num_layers, batch_size, Tm, dim_latent]
         
         w_p, w_p_hat, w_q, w_q_hat = None, None, None, None
         for i in range (self.num_layers):
-            w_p, w_p_hat, mu_p[i], var_p[i], mu_p_loss[i], var_p_loss[i], w_q, w_q_hat, mu_q[i], var_q[i] = self.protran_layers[i](
+            w_p, w_p_hat, mu_p[i], var_p[i], w_q, w_q_hat, mu_q[i], var_q[i] = self.protran_layers[i](
                 input_projection_p = input_projection_p,
                 input_projection_q = input_projection_q,
                 batch_size = batch_size,
@@ -520,7 +504,7 @@ class ProTranHierarchy(nn.Module):
             # reset k in encoder layer
             self.protran_layers[i].reset_k_encoder_layer()
         
-        return mu_p, var_p, mu_p_loss, var_p_loss, mu_q, var_q, w_p_hat, w_p, w_q_hat, w_q
+        return mu_p, var_p, mu_q, var_q, w_p_hat, w_p, w_q_hat, w_q
     
     
     def get_w_samples(
