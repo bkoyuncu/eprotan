@@ -2,6 +2,32 @@
 
 This Repo belongs to the paper *E-ProTran: Efficient Probabilistic Transformers for Forecasting* published in the [ICML 2024 Workshop on Structured Probabilistic Inference & Generative Modeling, 2024](https://spigmworkshop2024.github.io/).
 
+## Important Update
+In [Probabilistic Transformer (ProTran)](https://proceedings.neurips.cc/paper/2021/hash/c68bd9055776bf38d8fc43c0ed283678-Abstract.html) the authors report their ELBO as
+
+```math
+\begin{align*}
+\ln\left(p_\theta\left(x_{1:T} \vert x_{1:C}\right)\right) &\geq \mathbf{E}_{z_{1:T} \sim q_\phi(z_{1:T}\vert x_{1:T})}\left[\ln\left(p_\theta\left(x_{1:T} \vert z_{1:T}\right)\right)\right] - \mathrm{KL}\left( q_\phi(z_{1:T}\vert x_{1:T}) \Vert p_{\theta}(z_{1:T}\vert x_{1:C})\right)\\
+    & =\sum_{t=1}^T \mathbf{E}_{z_{1:T} \sim q_\phi(z_{1:T}\vert x_{1:T})}\left[\ln\left(p_\theta\left(x_{t} \vert z_{t}\right)\right)\right] - \mathrm{KL}\left( q_\phi(z_t\vert z_{1:t-1}, x_{1:T}) \Vert p_{\theta}(z_t \vert z_{1:t-1}, x_{1:C})\right)\\
+    & = \left(\sum_{t=1}^T \mathbf{E}_{z_{1:T} \sim q_\phi(z_{1:T}\vert x_{1:T})}\left[\ln\left(p_\theta\left(x_{t} \vert z_{t}\right)\right)\right]\right) - \mathrm{KL}\left( q_\phi(z_1\vert x_{1:T}) \Vert p_{\theta}(z_1 \vert x_{1:C})\right) \\
+    &\quad - \sum_{t=2}^T \mathrm{KL}\left( q_\phi(z_t\vert z_{1:t-1}, x_{1:T}) \Vert p_{\theta}(z_t \vert z_{1:t-1}, x_{1:C})\right).
+\end{align*}
+```
+
+However, fully written out the ELBO is:
+
+```math 
+\begin{align*}
+& \left(\sum_{t=1}^T \mathbf{E}_{z_{1:T} \sim q_\phi(z_{1:T}\vert x_{1:T})}\left[\ln\left(p_\theta\left(x_{t} \vert z_{t}\right)\right)\right]\right) - \mathrm{KL}\left( q_\phi(z_1\vert x_{1:T}) \Vert p_{\theta}(z_1 \vert x_{1:C})\right) \\
+& \quad - \sum_{t=2}^T \underset{\text{Missing Expectation}}{\underbrace{\mathbf{E}_{z_{1:t-1}\sim q_\phi(z_{1:t-1}\vert x_{1:T})}}}\left[\mathrm{KL}\left( q_\phi(z_t\vert z_{1:t-1}, x_{1:T}) \Vert p_{\theta}(z_t \vert z_{1:t-1}, x_{1:C})\right)\right]
+\end{align*}
+```
+
+From the second formulation it becomes clear that to approximate the expectation $`{\mathbf{E}_{z_{1:t-1}\sim q_\phi(z_{1:t-1}\vert x_{1:T})}}`$ in the loss, the KL-divergence $\mathrm{KL}\left( q_\phi(\cdot\vert z_{1:t-1}, x_{1:T}) \Vert p_{\theta}(\cdot \vert z_{1:t-1}, x_{1:C})\right)$ should be evaluated at samples $z_{1:t-1}\sim q_\phi(z_{1:t-1}\vert x_{1:T})$. 
+
+At the time of publishing, our re-implementation of their model wrongly evaluated $p_{\theta}(\cdot \vert z_{1:t-1}, x_{1:C})$ at samples from $z_{1:t-1}\sim p_\theta(z_{1:t-1}\vert x_{1:C})$. We are currently working on updating our code to correctly calculate the ELBO of the ProTran baseline. We will keep the old version of our code as `deprecated` to ensure reproducability of our experiments.
+
+
 ## Code
 This repository contains the code for our model, E-ProTran, as well as our implementation of the baseline model, [Probabilistic Transformer (ProTran)](https://proceedings.neurips.cc/paper/2021/hash/c68bd9055776bf38d8fc43c0ed283678-Abstract.html) by Binh Tang and David S. Matteson as the code was not publicly available.
 
