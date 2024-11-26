@@ -8,8 +8,8 @@ In [Probabilistic Transformer (ProTran)](https://proceedings.neurips.cc/paper/20
 ```math
 \begin{align*}
 \ln\left(p_\theta\left(x_{1:T} \vert x_{1:C}\right)\right) &\geq \mathbf{E}_{z_{1:T} \sim q_\phi(z_{1:T}\vert x_{1:T})}\left[\ln\left(p_\theta\left(x_{1:T} \vert z_{1:T}\right)\right)\right] - \mathrm{KL}\left( q_\phi(z_{1:T}\vert x_{1:T}) \Vert p_{\theta}(z_{1:T}\vert x_{1:C})\right)\\
-    & =\sum_{t=1}^T \mathbf{E}_{z_{1:T} \sim q_\phi(z_{1:T}\vert x_{1:T})}\left[\ln\left(p_\theta\left(x_{t} \vert z_{t}\right)\right)\right] - \mathrm{KL}\left( q_\phi(z_t\vert z_{1:t-1}, x_{1:T}) \Vert p_{\theta}(z_t \vert z_{1:t-1}, x_{1:C})\right)\\
-    & = \left(\sum_{t=1}^T \mathbf{E}_{z_{1:T} \sim q_\phi(z_{1:T}\vert x_{1:T})}\left[\ln\left(p_\theta\left(x_{t} \vert z_{t}\right)\right)\right]\right) - \mathrm{KL}\left( q_\phi(z_1\vert x_{1:T}) \Vert p_{\theta}(z_1 \vert x_{1:C})\right) \\
+    & =\sum_{t=1}^T \mathbf{E}_{z_{1:t} \sim q_\phi(z_{1:t}\vert x_{1:T})}\left[\ln\left(p_\theta\left(x_{t} \vert z_{t}\right)\right)\right] - \mathrm{KL}\left( q_\phi(z_t\vert z_{1:t-1}, x_{1:T}) \Vert p_{\theta}(z_t \vert z_{1:t-1}, x_{1:C})\right)\\
+    & = \left(\sum_{t=1}^T \mathbf{E}_{z_{1:t} \sim q_\phi(z_{1:t}\vert x_{1:T})}\left[\ln\left(p_\theta\left(x_{t} \vert z_{t}\right)\right)\right]\right) - \mathrm{KL}\left( q_\phi(z_1\vert x_{1:T}) \Vert p_{\theta}(z_1 \vert x_{1:C})\right) \\
     &\quad - \sum_{t=2}^T \mathrm{KL}\left( q_\phi(z_t\vert z_{1:t-1}, x_{1:T}) \Vert p_{\theta}(z_t \vert z_{1:t-1}, x_{1:C})\right).
 \end{align*}
 ```
@@ -18,7 +18,7 @@ However, fully written out the ELBO is:
 
 ```math 
 \begin{align*}
-& \left(\sum_{t=1}^T \mathbf{E}_{z_{1:T} \sim q_\phi(z_{1:T}\vert x_{1:T})}\left[\ln\left(p_\theta\left(x_{t} \vert z_{t}\right)\right)\right]\right) - \mathrm{KL}\left( q_\phi(z_1\vert x_{1:T}) \Vert p_{\theta}(z_1 \vert x_{1:C})\right) \\
+& \left(\sum_{t=1}^T \mathbf{E}_{z_{1:t} \sim q_\phi(z_{1:t}\vert x_{1:T})}\left[\ln\left(p_\theta\left(x_{t} \vert z_{t}\right)\right)\right]\right) - \mathrm{KL}\left( q_\phi(z_1\vert x_{1:T}) \Vert p_{\theta}(z_1 \vert x_{1:C})\right) \\
 & \quad - \sum_{t=2}^T \underset{\text{Missing Expectation}}{\underbrace{\mathbf{E}_{z_{1:t-1}\sim q_\phi(z_{1:t-1}\vert x_{1:T})}}}\left[\mathrm{KL}\left( q_\phi(z_t\vert z_{1:t-1}, x_{1:T}) \Vert p_{\theta}(z_t \vert z_{1:t-1}, x_{1:C})\right)\right]
 \end{align*}
 ```
